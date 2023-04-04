@@ -1,0 +1,50 @@
+function [flatC1,flatC2,flatImg,RPE,RPEloc]=Flattening_Corr(C1,C2,Img,ROI,maskfo)
+%% Image flattenning & ROI selection
+% Exclude the frame out parts
+[H,W0]=size(C1);
+% % figure;plot(project)
+Fiind=~isnan(maskfo);
+
+C1=C1(:,~isnan(maskfo));
+C2=C2(:,~isnan(maskfo));
+% figure;imshow(C1,[])
+Img=Img(:,~isnan(maskfo));
+[H,W]=size(Img);
+% detect RPE
+smoothC1=imgaussfilt(C1,[5,5]);
+profile=mean(smoothC1(:,1:200),2);
+profile=profile./max(profile);
+% figure;plot(profile)
+ind=find(profile>0.05);
+RPEloc=ind(end);
+ref=round((0:0.1:0.9).*W)+1;
+Img0=medfilt2(Img,[3,10]);
+for ii1=1:length(ref)
+    Curv(:,ii1)=FindCurv(Img0,ref(ii1));
+end
+% figure;plot(Curv)
+RPE=CombineCurve(Curv);
+% figure;plot(RPE)
+
+% flattening
+flatImg=Blending(Img,RPE);
+flatC1=Blending(C1,RPE);
+flatC2=Blending(C2,RPE);
+
+% select ROI
+flatImg=flatImg(RPEloc+(ROI(1):ROI(2)),:);
+flatC1=flatC1(RPEloc+(ROI(1):ROI(2)),:);
+flatC2=flatC2(RPEloc+(ROI(1):ROI(2)),:);
+H=size(flatImg,1);
+% figure;imshow(flatImg,[])
+tempImg=zeros(H,W0);
+tempC2=zeros(H,W0);
+tempC1=zeros(H,W0);
+tempImg(:,Fiind)=flatImg;
+tempC1(:,Fiind)=flatC1;
+tempC2(:,Fiind)=flatC2;
+flatImg=tempImg;
+flatC2=tempC2;
+flatC1=tempC1;
+
+% figure;imshow(flatImg,[])
